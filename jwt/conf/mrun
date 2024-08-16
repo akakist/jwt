@@ -1,0 +1,5 @@
+killall -9  mt-main-10100-1.exe
+killall -9  mt-main-10100-web.exe
+sleep 1
+./mt-main-10100-1.exe -d
+./mt-main-10100-web.exe -d
