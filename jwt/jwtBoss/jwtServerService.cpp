@@ -13,10 +13,12 @@
 
 
 
-bool jwtServer::Service::on_startService(const systemEvent::startService*)
+bool jwtBoss::Service::on_startService(const systemEvent::startService*)
 {
     MUTEX_INSPECTOR;
     try {
+
+        sendEvent(ServiceEnum::Timer,new timerEvent::SetTimer(1,NULL,NULL,cfg_timer_timeout,this));
 
     }  catch (CommonError& e) {
 
@@ -26,23 +28,39 @@ bool jwtServer::Service::on_startService(const systemEvent::startService*)
     return true;
 }
 
+bool jwtBoss::Service::TickTimer(const timerEvent::TickTimer* e)
+{
+    time_t now=time(NULL);
+    for(auto r=subscribers.begin();r!=subscribers.end(); r++)
+    {
+        if(now-r->second>cfg_timer_timeout)
+        {
+            r=subscribers.erase(r);
+            logErr2("erased subscriber due timeout");
+        }
 
-bool jwtServer::Service::handleEvent(const REF_getter<Event::Base>& e)
+    }
+    return true;
+}
+
+
+bool jwtBoss::Service::handleEvent(const REF_getter<Event::Base>& e)
 {
     XTRY;
     try {
         MUTEX_INSPECTOR;
         auto& ID=e->id;
         if(timerEventEnum::TickTimer==ID)
-        {
-            const timerEvent::TickTimer*ev=static_cast<const timerEvent::TickTimer*>(e.get());
-            return true;
-        }
+            return TickTimer(static_cast<const timerEvent::TickTimer*>(e.get()));
+
         if(systemEventEnum::startService==ID)
             return on_startService((const systemEvent::startService*)e.get());
 
         if(jwtEventEnum::AddTokenREQ==ID)
-            return on_AddTokenREQ((const jwtEvent::AddTokenREQ*)e.get());
+            return AddTokenREQ((const jwtEvent::AddTokenREQ*)e.get());
+
+        if(jwtEventEnum::Ping==ID)
+            return Ping((const jwtEvent::Ping*)e.get());
 
 
         if(rpcEventEnum::IncomingOnAcceptor==ID)
@@ -50,7 +68,18 @@ bool jwtServer::Service::handleEvent(const REF_getter<Event::Base>& e)
             auto E=(rpcEvent::IncomingOnAcceptor*)e.get();
             auto &IDA=E->e->id;
             if(jwtEventEnum::AddTokenREQ==IDA)
-                return on_AddTokenREQ((const jwtEvent::AddTokenREQ*)E->e.get());
+                return AddTokenREQ((const jwtEvent::AddTokenREQ*)E->e.get());
+            if(jwtEventEnum::Ping==IDA)
+                return Ping((const jwtEvent::Ping*)E->e.get());
+        }
+        if(rpcEventEnum::IncomingOnConnector==ID)
+        {
+            auto E=(rpcEvent::IncomingOnConnector*)e.get();
+            auto &IDC=E->e->id;
+            if(jwtEventEnum::AddTokenREQ==IDC)
+                return AddTokenREQ((const jwtEvent::AddTokenREQ*)E->e.get());
+            if(jwtEventEnum::Ping==IDC)
+                return Ping((const jwtEvent::Ping*)E->e.get());
         }
 
     } catch(std::exception &e)
@@ -63,12 +92,12 @@ bool jwtServer::Service::handleEvent(const REF_getter<Event::Base>& e)
 
 
 
-jwtServer::Service::~Service()
+jwtBoss::Service::~Service()
 {
 }
 
 
-jwtServer::Service::Service(const SERVICE_id& id, const std::string& nm,IInstance* ins):
+jwtBoss::Service::Service(const SERVICE_id& id, const std::string& nm,IInstance* ins):
     UnknownBase(nm),
     ListenerBuffered1Thread(nm,id),
     Broadcaster(ins)
@@ -82,31 +111,51 @@ void registerjwtServerService(const char* pn)
     XTRY;
     if(pn)
     {
-        iUtils->registerPlugingInfo(COREVERSION,pn,IUtils::PLUGIN_TYPE_SERVICE,ServiceEnum::jwtServer,"jwtServer",
+        iUtils->registerPlugingInfo(COREVERSION,pn,IUtils::PLUGIN_TYPE_SERVICE,ServiceEnum::jwtBoss,"jwtBoss",
                                     getEvents_jwtServerService());
     }
     else
     {
-        iUtils->registerService(COREVERSION,ServiceEnum::jwtServer,jwtServer::Service::construct,"jwtServer");
+        iUtils->registerService(COREVERSION,ServiceEnum::jwtBoss,jwtBoss::Service::construct,"jwtBoss");
         regEvents_jwtServerService();
     }
     XPASS;
 }
 
-int cnt=0;
-
-
-bool jwtServer::Service::on_AddTokenREQ(const jwtEvent::AddTokenREQ* e)
+int64_t jwtBoss::Service::lastId()
 {
-    cnt++;
-    if(cnt%1000==0)
+    int64_t lastNo=0;
+    auto it=users.rbegin();
+    if(it!=users.rend())
     {
-        printf("cnt %d\n",cnt);
+        lastNo=it->first;
     }
-    std::string xored=e->sampleString+"123";
+    return lastNo;
+}
 
+bool jwtBoss::Service::Ping(const jwtEvent::Ping* e)
+{
+    auto r=poppedFrontRoute(e->route);
+    subscribers.insert({r,time(NULL)});
+    passEvent(new jwtEvent::AddTokenRSP(lastId(),r));
+    return true;
+}
 
-    passEvent(new jwtEvent::TokenAddedRSP(e->session,xored,e->count,poppedFrontRoute(e->route)));
+bool jwtBoss::Service::AddTokenREQ(const jwtEvent::AddTokenREQ* e)
+{
+    int64_t newid=0;
+    auto rb=users.rbegin();
+    if(rb!=users.rend())
+    {
+        newid=rb->first+1;
+    }
+    users.insert({newid,std::move(e->ur)});
+
+    auto lastid=lastId();
+    for(auto& r:subscribers)
+    {
+        passEvent(new jwtEvent::AddTokenRSP(lastid,r.first));
+    }
     return true;
 }
 

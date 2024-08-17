@@ -14,10 +14,52 @@ bool jwtWebServer::Service::on_startService(const systemEvent::startService*)
     MUTEX_INSPECTOR;
 
     sendEvent(ServiceEnum::HTTP,new httpEvent::DoListen(bindAddr,ListenerBase::serviceId));
+    sendEvent(ServiceEnum::Timer,new timerEvent::SetTimer(T_PING,NULL,NULL,ping_timeout,this));
+
+    sendEvent(jwtBossAddr,ServiceEnum::jwtBoss,new jwtEvent::Ping(this));
+
 
     return true;
 }
 
+bool jwtWebServer::Service::TickTimer(const timerEvent::TickTimer *e)
+{
+    sendEvent(jwtBossAddr,ServiceEnum::jwtBoss,new jwtEvent::Ping(this));
+    return true;
+}
+bool jwtWebServer::Service::AddTokenRSP(const jwtEvent::AddTokenRSP* e)
+{
+    int64_t mylastId=0;
+    if(id_2_ur.size())
+    {
+        mylastId=id_2_ur.rbegin()->first;
+    }
+    if(e->lastId>mylastId)
+    {
+        sendEvent(jwtBossAddr,ServiceEnum::jwtBoss, new jwtEvent::GetUrSinceREQ(mylastId,ListenerBase::serviceId));
+    }
+    return true;
+}
+bool jwtWebServer::Service::GetUrSinceRSP(const jwtEvent::GetUrSinceRSP* e)
+{
+    for(auto& z:e->container)
+    {
+        REF_getter<P_user_rec> u=new P_user_rec;
+        u->ur=std::move(z.second);
+        user_2_ur.insert({u->ur.login,u});
+        id_2_ur.insert({z.first,u});
+    }
+    int64_t li=0;
+    if(id_2_ur.size())
+    {
+        li=id_2_ur.rbegin()->first;
+    }
+    if(li<e->lastId)
+    {
+        sendEvent(jwtBossAddr,ServiceEnum::jwtBoss,new jwtEvent::GetUrSinceREQ(li,ListenerBase::serviceId));
+    }
+    return true;
+}
 
 bool jwtWebServer::Service::handleEvent(const REF_getter<Event::Base>& e)
 {
@@ -26,33 +68,26 @@ bool jwtWebServer::Service::handleEvent(const REF_getter<Event::Base>& e)
         MUTEX_INSPECTOR;
         auto& ID=e->id;
         if(timerEventEnum::TickTimer==ID)
-        {
-            const timerEvent::TickTimer*ev=static_cast<const timerEvent::TickTimer*>(e.get());
-            if(ev->tid==TIMER_PUSH_NOOP)
-            {
-                for(auto &z: sessions)
-                {
-                    auto esi=z.second->esi;
-                    if(esi.valid())
-                    {
-                        if(!esi->closed())
-                        {
-                            esi->write_("   ");
-                        }
-                    }
-                    else logErr2("!if(esi.valid())");
-                }
-            }
-            return true;
-        }
+            return TickTimer(static_cast<const timerEvent::TickTimer*>(e.get()));
+
         if(httpEventEnum::RequestIncoming==ID)
             return on_RequestIncoming((const httpEvent::RequestIncoming*)e.get());
         if(systemEventEnum::startService==ID)
             return on_startService((const systemEvent::startService*)e.get());
 
+        if(jwtEventEnum::AddTokenRSP==ID)
+            return AddTokenRSP((const jwtEvent::AddTokenRSP*)e.get());
 
         if(jwtEventEnum::TokenAddedRSP==ID)
             return on_TokenAddedRSP((const jwtEvent::TokenAddedRSP*)e.get());
+
+        if(jwtEventEnum::AddTokenRSP==ID)
+            return AddTokenRSP((const jwtEvent::AddTokenRSP*)e.get());
+
+
+        if(jwtEventEnum::GetUrSinceRSP==ID)
+            return GetUrSinceRSP((const jwtEvent::GetUrSinceRSP*)e.get());
+
 
         if(rpcEventEnum::IncomingOnConnector==ID)
         {
@@ -60,6 +95,10 @@ bool jwtWebServer::Service::handleEvent(const REF_getter<Event::Base>& e)
             auto& IDC=E->e->id;
             if(jwtEventEnum::TokenAddedRSP==IDC)
                 return on_TokenAddedRSP((const jwtEvent::TokenAddedRSP*)E->e.get());
+            if(jwtEventEnum::AddTokenRSP==IDC)
+                return AddTokenRSP((const jwtEvent::AddTokenRSP*)E->e.get());
+            if(jwtEventEnum::GetUrSinceRSP==IDC)
+                return GetUrSinceRSP((const jwtEvent::GetUrSinceRSP*)E->e.get());
 
 
             return false;
@@ -71,6 +110,10 @@ bool jwtWebServer::Service::handleEvent(const REF_getter<Event::Base>& e)
             auto& IDA=E->e->id;
             if(jwtEventEnum::TokenAddedRSP==IDA)
                 return on_TokenAddedRSP((const jwtEvent::TokenAddedRSP*)E->e.get());
+            if(jwtEventEnum::AddTokenRSP==IDA)
+                return AddTokenRSP((const jwtEvent::AddTokenRSP*)E->e.get());
+            if(jwtEventEnum::GetUrSinceRSP==IDA)
+                return GetUrSinceRSP((const jwtEvent::GetUrSinceRSP*)E->e.get());
 
 
             return false;
@@ -106,7 +149,9 @@ jwtWebServer::Service::Service(const SERVICE_id& id, const std::string& nm,IInst
         throw CommonError("if(ba.size()==0)");
 
     bindAddr=*ba.begin();
-    jwtServerAddr=ins->getConfig()->get_string("jwtServerAddr","local","server jwt address");
+    jwtBossAddr=ins->getConfig()->get_string("bossAddr","local","boss jwt address");
+
+    ping_timeout=ins->getConfig()->get_int64_t("ping_timeout",3,"ping timeout to boss");
 
 }
 
@@ -152,21 +197,18 @@ bool jwtWebServer::Service::on_RequestIncoming(const httpEvent::RequestIncoming*
 {
 
     HTTP::Response resp(getIInstance());
-    auto S=check_session(e->req,resp,e->esi);
 //    for(auto &z: e->req->headers)
 //    {
 //        printf("%s: %s\n",z.first.c_str(),z.second.c_str());
 //    }
-    S->esi=e->esi;
 
     if(1){
 
         std::string query_string=e->req->params["query_string"];
 
-//        for(int i=0;i<10;i++)
         {
-            sendEvent(jwtServerAddr,ServiceEnum::jwtServer,new jwtEvent::AddTokenREQ(S->sessionId,
-                                                                                                   query_string,0,ListenerBase::serviceId));
+            user_rec ur;
+            sendEvent(jwtBossAddr,ServiceEnum::jwtBoss,new jwtEvent::AddTokenREQ(ur, ListenerBase::serviceId));
         }
         return true;
     }
@@ -192,42 +234,13 @@ bool jwtWebServer::Service::on_RequestIncoming(const httpEvent::RequestIncoming*
 }
 
 
-static int cnt2;
-REF_getter<jwtWebServer::Session> jwtWebServer::Service::check_session( const REF_getter<HTTP::Request>& req, HTTP::Response& resp, const REF_getter<epoll_socket_info>& esi)
-{
-
-    auto session_id=std::to_string(cnt2++);
-    REF_getter<Session>S=new Session(session_id,req,esi);
-    {
-//        logErr2("insert into sessions %s",iUtils->bin2hex(session_id).c_str());
-        sessions.insert(std::make_pair(session_id,S));
-    }
-    return S;
-
-}
-REF_getter<jwtWebServer::Session> jwtWebServer::Service::get_session( const std::string& session_id)
-{
-
-    REF_getter<Session> S(nullptr);
-    auto it=sessions.find(session_id);
-    if(it!=sessions.end())
-        S=it->second;
-    else
-    {
-        throw CommonError("session not found %s",session_id.c_str());
-    }
-    return S;
-
-}
 
 bool jwtWebServer::Service::on_TokenAddedRSP(const jwtEvent::TokenAddedRSP*e)
 {
     if(e->count==0)
     {
         HTTP::Response resp(getIInstance());
-        auto S=get_session(e->session);
-        bool keepAlive=S->req->headers["CONNECTION"]=="Keep-Alive";
-        keepAlive=true;
+        auto keepAlive=true;
         if(keepAlive)
         {
             resp.http_header_out["Connection"]="Keep-Alive";
@@ -235,15 +248,16 @@ bool jwtWebServer::Service::on_TokenAddedRSP(const jwtEvent::TokenAddedRSP*e)
         }
         resp.content="<div>received response </div>";
 //        logErr2("resp:%s",resp.build_html_response().c_str());
-        if(keepAlive)
-            resp.makeResponsePersistent(S->esi);
-        else
-            resp.makeResponse(S->esi);
+//        if(keepAlive)
+//            resp.makeResponsePersistent(S->esi);
+//        else
+//            resp.makeResponse(S->esi);
 
     }
     else
     {
-        sendEvent(jwtServerAddr,ServiceEnum::jwtServer,new jwtEvent::AddTokenREQ(e->session,e->sampleString,e->count-1,ListenerBase::serviceId));
+        user_rec ur;
+        sendEvent(jwtBossAddr,ServiceEnum::jwtBoss,new jwtEvent::AddTokenREQ(ur,ListenerBase::serviceId));
 
     }
 

@@ -1,6 +1,6 @@
 #pragma once
 #include "broadcaster.h"
-
+#include "common/jwt_common.h"
 
 
 #include "listenerBuffered1Thread.h"
@@ -10,10 +10,11 @@
 #include "Events/System/Run/startServiceEvent.h"
 
 #include "Events/jwtEvent.h"
+#include "Events/System/timerEvent.h"
 
 
 
-namespace jwtServer
+namespace jwtBoss
 {
 
 
@@ -45,15 +46,18 @@ namespace jwtServer
         }
 
 
-        bool on_AddTokenREQ(const jwtEvent::AddTokenREQ* e);
+        bool AddTokenREQ(const jwtEvent::AddTokenREQ* e);
+        bool Ping(const jwtEvent::Ping* e);
+        bool TickTimer(const timerEvent::TickTimer* e);
+        int64_t lastId();
+
+        std::map<route_t, time_t> subscribers;
+
+        std::map<int64_t, user_rec> users;
 
 
-
-
-
-
-
-
+        time_t cfg_node_time_out;
+        time_t cfg_timer_timeout;
 
     };
 
