@@ -1,7 +1,7 @@
 
 #include "IUtils.h"
 IUtils *iUtils;
-void registerjwtServerService(const char* pn);
+void register_jwtBoss(const char* pn);
 extern "C" void
 #ifdef _WIN32
 __declspec(dllexport)
@@ -15,6 +15,6 @@ registerModule
 {
 
     iUtils=f;
-    registerjwtServerService(pn);
+    register_jwtBoss(pn);
 }
 

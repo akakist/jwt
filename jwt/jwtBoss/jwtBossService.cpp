@@ -6,9 +6,9 @@
 #include "tools_mt.h"
 
 #include <map>
-#include "jwtServerService.h"
+#include "jwtBossService.h"
 #include "Events/jwtEvent.h"
-#include "events_jwtServerService.hpp"
+#include "events_jwtBossService.hpp"
 #include "version_mega.h"
 
 
@@ -104,7 +104,7 @@ jwtBoss::Service::Service(const SERVICE_id& id, const std::string& nm,IInstance*
 {
 }
 
-void registerjwtServerService(const char* pn)
+void register_jwtBoss(const char* pn)
 {
     MUTEX_INSPECTOR;
 
@@ -112,12 +112,12 @@ void registerjwtServerService(const char* pn)
     if(pn)
     {
         iUtils->registerPlugingInfo(COREVERSION,pn,IUtils::PLUGIN_TYPE_SERVICE,ServiceEnum::jwtBoss,"jwtBoss",
-                                    getEvents_jwtServerService());
+                                    getEvents_jwtBossService());
     }
     else
     {
         iUtils->registerService(COREVERSION,ServiceEnum::jwtBoss,jwtBoss::Service::construct,"jwtBoss");
-        regEvents_jwtServerService();
+        regEvents_jwtBossService();
     }
     XPASS;
 }

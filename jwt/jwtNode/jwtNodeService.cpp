@@ -3,8 +3,8 @@
 #include <time.h>
 #include <time.h>
 #include <map>
-#include "jwtWebServerService.h"
-#include "events_jwtWebServer.hpp"
+#include "jwtNodeService.h"
+#include "events_jwtNode.hpp"
 #include "version_mega.h"
 
 
@@ -155,19 +155,19 @@ jwtNode::Service::Service(const SERVICE_id& id, const std::string& nm,IInstance*
 
 }
 
-void registerjwtServerWebService(const char* pn)
+void register_jwtNode(const char* pn)
 {
     MUTEX_INSPECTOR;
 
     XTRY;
     if(pn)
     {
-        iUtils->registerPlugingInfo(COREVERSION,pn,IUtils::PLUGIN_TYPE_SERVICE,ServiceEnum::jwtNode,"jwtNode",getEvents_jwtWebServer());
+        iUtils->registerPlugingInfo(COREVERSION,pn,IUtils::PLUGIN_TYPE_SERVICE,ServiceEnum::jwtNode,"jwtNode",getEvents_jwtNode());
     }
     else
     {
         iUtils->registerService(COREVERSION,ServiceEnum::jwtNode,jwtNode::Service::construct,"jwtNode");
-        regEvents_jwtWebServer();
+        regEvents_jwtNode();
     }
     XPASS;
 }

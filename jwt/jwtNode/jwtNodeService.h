@@ -61,7 +61,6 @@ namespace jwtNode
         std::string jwtBossAddr;
         time_t ping_timeout;
 
-//        std::set<std::string> tokens;
         std::map<std::string, REF_getter<P_user_rec> > user_2_ur;
         std::map<int64_t, REF_getter<P_user_rec> > id_2_ur;
 
