@@ -2,9 +2,9 @@ cmake_minimum_required (VERSION 3.0)
 
 add_library(jwt-boss SHARED
 
-jwtServer.cpp
-jwtServerService.cpp
-jwtServerService.h
+jwtBoss.cpp
+jwtBossService.cpp
+jwtBossService.h
 
 )
 

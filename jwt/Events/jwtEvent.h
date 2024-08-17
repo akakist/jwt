@@ -8,7 +8,7 @@
 namespace ServiceEnum
 {
     const SERVICE_id jwtBoss(genum_jwtServer);
-    const SERVICE_id jwtServerWeb(genum_jwtServerWeb);
+    const SERVICE_id jwtNode(genum_jwtServerWeb);
 }
 
 namespace jwtEventEnum

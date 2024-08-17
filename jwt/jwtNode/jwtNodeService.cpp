@@ -9,7 +9,7 @@
 
 
 
-bool jwtWebServer::Service::on_startService(const systemEvent::startService*)
+bool jwtNode::Service::on_startService(const systemEvent::startService*)
 {
     MUTEX_INSPECTOR;
 
@@ -22,12 +22,12 @@ bool jwtWebServer::Service::on_startService(const systemEvent::startService*)
     return true;
 }
 
-bool jwtWebServer::Service::TickTimer(const timerEvent::TickTimer *e)
+bool jwtNode::Service::TickTimer(const timerEvent::TickTimer *e)
 {
     sendEvent(jwtBossAddr,ServiceEnum::jwtBoss,new jwtEvent::Ping(this));
     return true;
 }
-bool jwtWebServer::Service::AddTokenRSP(const jwtEvent::AddTokenRSP* e)
+bool jwtNode::Service::AddTokenRSP(const jwtEvent::AddTokenRSP* e)
 {
     int64_t mylastId=0;
     if(id_2_ur.size())
@@ -40,7 +40,7 @@ bool jwtWebServer::Service::AddTokenRSP(const jwtEvent::AddTokenRSP* e)
     }
     return true;
 }
-bool jwtWebServer::Service::GetUrSinceRSP(const jwtEvent::GetUrSinceRSP* e)
+bool jwtNode::Service::GetUrSinceRSP(const jwtEvent::GetUrSinceRSP* e)
 {
     for(auto& z:e->container)
     {
@@ -61,7 +61,7 @@ bool jwtWebServer::Service::GetUrSinceRSP(const jwtEvent::GetUrSinceRSP* e)
     return true;
 }
 
-bool jwtWebServer::Service::handleEvent(const REF_getter<Event::Base>& e)
+bool jwtNode::Service::handleEvent(const REF_getter<Event::Base>& e)
 {
     XTRY;
     try {
@@ -134,12 +134,12 @@ bool jwtWebServer::Service::handleEvent(const REF_getter<Event::Base>& e)
     return false;
 }
 
-jwtWebServer::Service::~Service()
+jwtNode::Service::~Service()
 {
 }
 
 
-jwtWebServer::Service::Service(const SERVICE_id& id, const std::string& nm,IInstance* ins):
+jwtNode::Service::Service(const SERVICE_id& id, const std::string& nm,IInstance* ins):
     UnknownBase(nm),
     ListenerBuffered1Thread(nm,id),
     Broadcaster(ins)
@@ -162,11 +162,11 @@ void registerjwtServerWebService(const char* pn)
     XTRY;
     if(pn)
     {
-        iUtils->registerPlugingInfo(COREVERSION,pn,IUtils::PLUGIN_TYPE_SERVICE,ServiceEnum::jwtServerWeb,"jwtServerWeb",getEvents_jwtWebServer());
+        iUtils->registerPlugingInfo(COREVERSION,pn,IUtils::PLUGIN_TYPE_SERVICE,ServiceEnum::jwtNode,"jwtNode",getEvents_jwtWebServer());
     }
     else
     {
-        iUtils->registerService(COREVERSION,ServiceEnum::jwtServerWeb,jwtWebServer::Service::construct,"jwtServerWeb");
+        iUtils->registerService(COREVERSION,ServiceEnum::jwtNode,jwtNode::Service::construct,"jwtNode");
         regEvents_jwtWebServer();
     }
     XPASS;
@@ -193,7 +193,7 @@ std::string index_html=R"ZXC(
 </html>
 )ZXC";
 
-bool jwtWebServer::Service::on_RequestIncoming(const httpEvent::RequestIncoming*e)
+bool jwtNode::Service::on_RequestIncoming(const httpEvent::RequestIncoming*e)
 {
 
     HTTP::Response resp(getIInstance());
@@ -235,7 +235,7 @@ bool jwtWebServer::Service::on_RequestIncoming(const httpEvent::RequestIncoming*
 
 
 
-bool jwtWebServer::Service::on_TokenAddedRSP(const jwtEvent::TokenAddedRSP*e)
+bool jwtNode::Service::on_TokenAddedRSP(const jwtEvent::TokenAddedRSP*e)
 {
     if(e->count==0)
     {

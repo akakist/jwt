@@ -1,9 +1,9 @@
 cmake_minimum_required (VERSION 3.0)
 
 add_library(jwt-node SHARED
-jwtWebServer.cpp
-jwtWebServerService.cpp
-jwtWebServerService.h
+jwtNode.cpp
+jwtNodeService.cpp
+jwtNodeService.h
 )
 
 target_link_libraries(jwt-node   megatron-core pthread)

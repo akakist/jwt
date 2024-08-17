@@ -12,7 +12,7 @@
 #include "Events/System/timerEvent.h"
 #define SESSION_ID  "session_id"
 
-namespace jwtWebServer
+namespace jwtNode
 {
 
     enum timers{
