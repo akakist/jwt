@@ -1,14 +1,14 @@
-#ifndef _________dfsReferrerEvent_h123Z1
-#define _________dfsReferrerEvent_h123Z1
+#pragma once
 #include "EVENT_id.h"
 #include "SERVICE_id.h"
 #include "event_mt.h"
 #include "genum.hpp"
 #include "common/jwt_common.h"
+#include "msockaddr_in.h"
 namespace ServiceEnum
 {
-    const SERVICE_id jwtBoss(genum_jwtServer);
-    const SERVICE_id jwtNode(genum_jwtServerWeb);
+    const SERVICE_id jwtBoss(genum_jwtBoss);
+    const SERVICE_id jwtNode(genum_jwtNode);
 }
 
 namespace jwtEventEnum
@@ -22,11 +22,138 @@ namespace jwtEventEnum
     const EVENT_id GetUrSinceREQ(genum_GetUrSinceREQ);
     const EVENT_id GetUrSinceRSP(genum_GetUrSinceRSP);
 
+    const EVENT_id NotifyNewTokenREQ(genum_NotifyNewTokenREQ);
+    const EVENT_id NotifyNewTokenRSP(genum_NotifyNewTokenRSP);
+
+    const EVENT_id NotifyDB(genum_NotifyDB);
+
+    const EVENT_id RegisterTokenREQ(genum_RegisterTokenREQ);
+    const EVENT_id RegisterTokenRSP(genum_RegisterTokenRSP);
+
 }
 
 namespace jwtEvent {
 
+    class NotifyNewTokenREQ: public Event::Base
+    {
+    public:
+        static Base* construct(const route_t &r)
+        {
+            return new NotifyNewTokenREQ(r);
+        }
+        NotifyNewTokenREQ(int64_t token_id, const msockaddr_in& _node, const user_rec &_ur,
+                   const route_t&r)
+            :Base(jwtEventEnum::NotifyNewTokenREQ,r),
+             tokenId(token_id),node(_node),ur(_ur)
+        {}
+        NotifyNewTokenREQ(const route_t&r)
+            :Base(jwtEventEnum::NotifyNewTokenREQ,r) {}
+        int64_t tokenId;
+        msockaddr_in node;
+        user_rec ur;
+        void unpack(inBuffer& o)
+        {
+            o>>tokenId>>node>>ur;
+        }
+        void pack(outBuffer&o) const
+        {
+            o<<tokenId<<node<<ur;
+        }
+        void jdump(Json::Value &) const
+        {
+        }
 
+    };
+
+
+    class RegisterTokenREQ: public Event::Base
+    {
+    public:
+        static Base* construct(const route_t &r)
+        {
+            return new RegisterTokenREQ(r);
+        }
+        RegisterTokenREQ(const std::string& l, const std::string& p, int64_t _reqNo,
+                   const route_t&r)
+            :Base(jwtEventEnum::RegisterTokenREQ,r),
+             login(l),password(p),reqNo(_reqNo)
+        {}
+        RegisterTokenREQ(const route_t&r)
+            :Base(jwtEventEnum::RegisterTokenREQ,r) {}
+        std::string login;
+        std::string password;
+        int64_t reqNo;
+        void unpack(inBuffer& o)
+        {
+            o>>login>>password>>reqNo;
+        }
+        void pack(outBuffer&o) const
+        {
+            o<<login<<password<<reqNo;
+        }
+        void jdump(Json::Value &) const
+        {
+        }
+
+    };
+    class RegisterTokenRSP: public Event::Base
+    {
+    public:
+        static Base* construct(const route_t &r)
+        {
+            return new RegisterTokenRSP(r);
+        }
+        RegisterTokenRSP(const std::string& _err, int64_t _reqNo,
+                   const route_t&r)
+            :Base(jwtEventEnum::RegisterTokenRSP,r),
+             error(_err),reqNo(_reqNo)
+        {}
+        RegisterTokenRSP(const route_t&r)
+            :Base(jwtEventEnum::RegisterTokenRSP,r) {}
+        std::string error;
+        int64_t reqNo;
+        void unpack(inBuffer& o)
+        {
+            o>>error>>reqNo;
+        }
+        void pack(outBuffer&o) const
+        {
+            o<<error<<reqNo;
+        }
+        void jdump(Json::Value &) const
+        {
+        }
+
+    };
+
+    class NotifyDB: public Event::Base
+    {
+    public:
+        static Base* construct(const route_t &r)
+        {
+            return new NotifyDB(r);
+        }
+        NotifyDB(const std::map<int64_t,user_rec>& _ur,
+                   const route_t&r)
+            :Base(jwtEventEnum::NotifyDB,r),
+             ur(_ur)
+        {}
+        NotifyDB(const route_t&r)
+            :Base(jwtEventEnum::NotifyDB,r) {}
+        std::map<int64_t,user_rec> ur;
+        void unpack(inBuffer& o)
+        {
+            o>>ur;
+        }
+        void pack(outBuffer&o) const
+        {
+            o<<ur;
+        }
+        void jdump(Json::Value &) const
+        {
+        }
+
+    };
 
 
     class AddTokenREQ: public Event::Base
@@ -204,4 +331,3 @@ namespace jwtEvent {
 
 
 
-#endif

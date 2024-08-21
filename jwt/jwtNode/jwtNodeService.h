@@ -42,6 +42,7 @@ namespace jwtNode
 
         bool AddTokenRSP(const jwtEvent::AddTokenRSP* e);
         bool GetUrSinceRSP(const jwtEvent::GetUrSinceRSP* e);
+        bool NotifyDB(jwtEvent::NotifyDB *e);
 
     public:
         void deinit()
@@ -65,7 +66,8 @@ namespace jwtNode
         std::map<int64_t, REF_getter<P_user_rec> > id_2_ur;
 
 
-
+        int64_t reg_seqId=0;
+        std::map<int64_t, REF_getter<httpEvent::RequestIncoming> > http_sessions;
 
 
     };

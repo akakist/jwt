@@ -27,6 +27,19 @@ bool jwtNode::Service::TickTimer(const timerEvent::TickTimer *e)
     sendEvent(jwtBossAddr,ServiceEnum::jwtBoss,new jwtEvent::Ping(this));
     return true;
 }
+bool jwtNode::Service::NotifyDB( jwtEvent::NotifyDB* e)
+{
+    for(auto& z:e->ur)
+    {
+        REF_getter<P_user_rec> p=new P_user_rec;
+        p->ur=std::move(z.second);
+        int64_t id=z.first;
+        user_2_ur.insert({p->ur.login,p});
+        id_2_ur.insert({z.first,p});
+    }
+    return true;
+}
+
 bool jwtNode::Service::AddTokenRSP(const jwtEvent::AddTokenRSP* e)
 {
     int64_t mylastId=0;
@@ -89,6 +102,9 @@ bool jwtNode::Service::handleEvent(const REF_getter<Event::Base>& e)
             return GetUrSinceRSP((const jwtEvent::GetUrSinceRSP*)e.get());
 
 
+        if(jwtEventEnum::NotifyDB==ID)
+            return NotifyDB((jwtEvent::NotifyDB*)e.get());
+
         if(rpcEventEnum::IncomingOnConnector==ID)
         {
             rpcEvent::IncomingOnConnector *E=(rpcEvent::IncomingOnConnector *) e.get();
@@ -99,6 +115,8 @@ bool jwtNode::Service::handleEvent(const REF_getter<Event::Base>& e)
                 return AddTokenRSP((const jwtEvent::AddTokenRSP*)E->e.get());
             if(jwtEventEnum::GetUrSinceRSP==IDC)
                 return GetUrSinceRSP((const jwtEvent::GetUrSinceRSP*)E->e.get());
+            if(jwtEventEnum::NotifyDB==IDC)
+                return NotifyDB(( jwtEvent::NotifyDB*)E->e.get());
 
 
             return false;
@@ -114,6 +132,8 @@ bool jwtNode::Service::handleEvent(const REF_getter<Event::Base>& e)
                 return AddTokenRSP((const jwtEvent::AddTokenRSP*)E->e.get());
             if(jwtEventEnum::GetUrSinceRSP==IDA)
                 return GetUrSinceRSP((const jwtEvent::GetUrSinceRSP*)E->e.get());
+            if(jwtEventEnum::NotifyDB==IDA)
+                return NotifyDB(( jwtEvent::NotifyDB*)E->e.get());
 
 
             return false;
@@ -197,6 +217,16 @@ bool jwtNode::Service::on_RequestIncoming(const httpEvent::RequestIncoming*e)
 {
 
     HTTP::Response resp(getIInstance());
+    if(e->req->url=="/register")
+    {
+        auto &l=e->req->params["l"];
+        auto &p=e->req->params["p"];
+        auto session=reg_seqId++;
+        http_sessions.insert({session,e});
+        sendEvent(jwtBossAddr,ServiceEnum::jwtBoss,new jwtEvent::RegisterTokenREQ(l,p,session,ListenerBase::serviceId));
+        return true;
+
+    }
 //    for(auto &z: e->req->headers)
 //    {
 //        printf("%s: %s\n",z.first.c_str(),z.second.c_str());

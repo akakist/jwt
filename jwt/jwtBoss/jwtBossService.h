@@ -3,6 +3,7 @@
 #include "common/jwt_common.h"
 
 
+#include "epoll_socket_info.h"
 #include "listenerBuffered1Thread.h"
 #include <map>
 
@@ -11,12 +12,22 @@
 
 #include "Events/jwtEvent.h"
 #include "Events/System/timerEvent.h"
+#include "Events/System/Net/rpcEvent.h"
 
 
 
 namespace jwtBoss
 {
-
+    enum Timers
+    {
+        TI_PING,
+    };
+    struct subscriber
+    {
+        route_t route;
+        msockaddr_in sa;
+        time_t last_time_hit=0;
+    };
 
     class Service:
         public UnknownBase,
@@ -45,13 +56,14 @@ namespace jwtBoss
             return new Service(id,nm,obj);
         }
 
-
+        bool Accepted(const rpcEvent::Accepted* e);
         bool AddTokenREQ(const jwtEvent::AddTokenREQ* e);
-        bool Ping(const jwtEvent::Ping* e);
+        bool RegisterTokenREQ(const jwtEvent::RegisterTokenREQ* e);
+        bool Ping(const jwtEvent::Ping* e, epoll_socket_info *esi_remote);
         bool TickTimer(const timerEvent::TickTimer* e);
         int64_t lastId();
 
-        std::map<route_t, time_t> subscribers;
+        std::map<msockaddr_in, subscriber > subscribers;
 
         std::map<int64_t, user_rec> users;
 
