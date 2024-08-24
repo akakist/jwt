@@ -15,16 +15,11 @@ inline std::set<EVENT_id> getEvents_jwtNode()
 	std::set<EVENT_id> out;
 	out.insert(httpEventEnum::DoListen);
 	out.insert(httpEventEnum::RequestIncoming);
-	out.insert(jwtEventEnum::AddTokenREQ);
-	out.insert(jwtEventEnum::AddTokenRSP);
-	out.insert(jwtEventEnum::GetUrSinceREQ);
-	out.insert(jwtEventEnum::GetUrSinceRSP);
 	out.insert(jwtEventEnum::NotifyDB);
 	out.insert(jwtEventEnum::NotifyNewTokenREQ);
 	out.insert(jwtEventEnum::NotifyNewTokenRSP);
 	out.insert(jwtEventEnum::Ping);
 	out.insert(jwtEventEnum::RegisterTokenREQ);
-	out.insert(jwtEventEnum::TokenAddedRSP);
 	out.insert(rpcEventEnum::Accepted);
 	out.insert(rpcEventEnum::Connected);
 	out.insert(rpcEventEnum::IncomingOnAcceptor);
@@ -41,16 +36,11 @@ inline void regEvents_jwtNode()
 {
 	iUtils->registerEvent(httpEvent::DoListen::construct);
 	iUtils->registerEvent(httpEvent::RequestIncoming::construct);
-	iUtils->registerEvent(jwtEvent::AddTokenREQ::construct);
-	iUtils->registerEvent(jwtEvent::AddTokenRSP::construct);
-	iUtils->registerEvent(jwtEvent::GetUrSinceREQ::construct);
-	iUtils->registerEvent(jwtEvent::GetUrSinceRSP::construct);
 	iUtils->registerEvent(jwtEvent::NotifyDB::construct);
 	iUtils->registerEvent(jwtEvent::NotifyNewTokenREQ::construct);
 	iUtils->registerEvent(jwtEvent::NotifyNewTokenRSP::construct);
 	iUtils->registerEvent(jwtEvent::Ping::construct);
 	iUtils->registerEvent(jwtEvent::RegisterTokenREQ::construct);
-	iUtils->registerEvent(jwtEvent::TokenAddedRSP::construct);
 	iUtils->registerEvent(rpcEvent::Accepted::construct);
 	iUtils->registerEvent(rpcEvent::Connected::construct);
 	iUtils->registerEvent(rpcEvent::IncomingOnAcceptor::construct);

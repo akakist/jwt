@@ -37,12 +37,9 @@ namespace jwtNode
 
 
         bool RequestIncoming(const httpEvent::RequestIncoming*);
-        bool on_TokenAddedRSP(const jwtEvent::TokenAddedRSP*e);
 
         bool TickTimer(const timerEvent::TickTimer *e);
 
-        bool AddTokenRSP(const jwtEvent::AddTokenRSP* e);
-        bool GetUrSinceRSP(const jwtEvent::GetUrSinceRSP* e);
         bool NotifyDB(jwtEvent::NotifyDB *e);
 
         bool NotifyNewTokenREQ(jwtEvent::NotifyNewTokenREQ *e);

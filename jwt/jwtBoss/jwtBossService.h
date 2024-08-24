@@ -60,7 +60,6 @@ namespace jwtBoss
         bool ConnectFailed(const rpcEvent::ConnectFailed* e);
         bool Connected(const rpcEvent::Connected* e);
 
-        bool AddTokenREQ(const jwtEvent::AddTokenREQ* e);
         bool RegisterTokenREQ(const jwtEvent::RegisterTokenREQ* e);
         bool NotifyNewTokenRSP(const jwtEvent::NotifyNewTokenRSP* e);
 

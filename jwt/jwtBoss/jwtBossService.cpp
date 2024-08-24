@@ -102,8 +102,6 @@ bool jwtBoss::Service::handleEvent(const REF_getter<Event::Base>& e)
         if(systemEventEnum::startService==ID)
             return on_startService((const systemEvent::startService*)e.get());
 
-        if(jwtEventEnum::AddTokenREQ==ID)
-            return AddTokenREQ((const jwtEvent::AddTokenREQ*)e.get());
         if(jwtEventEnum::NotifyNewTokenRSP==ID)
             return NotifyNewTokenRSP((const jwtEvent::NotifyNewTokenRSP*)e.get());
 
@@ -120,8 +118,6 @@ bool jwtBoss::Service::handleEvent(const REF_getter<Event::Base>& e)
         {
             auto E=(rpcEvent::IncomingOnAcceptor*)e.get();
             auto &IDA=E->e->id;
-            if(jwtEventEnum::AddTokenREQ==IDA)
-                return AddTokenREQ((const jwtEvent::AddTokenREQ*)E->e.get());
             if(jwtEventEnum::Ping==IDA)
                 return Ping((const jwtEvent::Ping*)E->e.get(),E->esi.get());
             if(jwtEventEnum::RegisterTokenREQ==IDA)
@@ -133,8 +129,6 @@ bool jwtBoss::Service::handleEvent(const REF_getter<Event::Base>& e)
         {
             auto E=(rpcEvent::IncomingOnConnector*)e.get();
             auto &IDC=E->e->id;
-            if(jwtEventEnum::AddTokenREQ==IDC)
-                return AddTokenREQ((const jwtEvent::AddTokenREQ*)E->e.get());
             if(jwtEventEnum::Ping==IDC)
                 return Ping((const jwtEvent::Ping*)E->e.get(),E->esi.get());
             if(jwtEventEnum::RegisterTokenREQ==IDC)
@@ -227,21 +221,4 @@ bool jwtBoss::Service::Ping(const jwtEvent::Ping* e,   epoll_socket_info *esi_re
     return true;
 }
 
-bool jwtBoss::Service::AddTokenREQ(const jwtEvent::AddTokenREQ* e)
-{
-    int64_t newid=0;
-    auto rb=users.rbegin();
-    if(rb!=users.rend())
-    {
-        newid=rb->first+1;
-    }
-    users.insert({newid,std::move(e->ur)});
-
-    auto lastid=lastId();
-    for(auto& r:subscribers)
-    {
-        passEvent(new jwtEvent::AddTokenRSP(lastid,r.second.route));
-    }
-    return true;
-}
 

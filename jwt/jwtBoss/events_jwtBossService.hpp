@@ -12,8 +12,6 @@ inline std::set<EVENT_id> getEvents_jwtBossService()
 {
 
 	std::set<EVENT_id> out;
-	out.insert(jwtEventEnum::AddTokenREQ);
-	out.insert(jwtEventEnum::AddTokenRSP);
 	out.insert(jwtEventEnum::NotifyDB);
 	out.insert(jwtEventEnum::NotifyNewTokenREQ);
 	out.insert(jwtEventEnum::NotifyNewTokenRSP);
@@ -35,8 +33,6 @@ inline std::set<EVENT_id> getEvents_jwtBossService()
 
 inline void regEvents_jwtBossService()
 {
-	iUtils->registerEvent(jwtEvent::AddTokenREQ::construct);
-	iUtils->registerEvent(jwtEvent::AddTokenRSP::construct);
 	iUtils->registerEvent(jwtEvent::NotifyDB::construct);
 	iUtils->registerEvent(jwtEvent::NotifyNewTokenREQ::construct);
 	iUtils->registerEvent(jwtEvent::NotifyNewTokenRSP::construct);

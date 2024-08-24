@@ -43,39 +43,6 @@ bool jwtNode::Service::NotifyDB( jwtEvent::NotifyDB* e)
     return true;
 }
 
-bool jwtNode::Service::AddTokenRSP(const jwtEvent::AddTokenRSP* e)
-{
-    int64_t mylastId=0;
-    if(id_2_ur.size())
-    {
-        mylastId=id_2_ur.rbegin()->first;
-    }
-    if(e->lastId>mylastId)
-    {
-        sendEvent(jwtBossAddr,ServiceEnum::jwtBoss, new jwtEvent::GetUrSinceREQ(mylastId,ListenerBase::serviceId));
-    }
-    return true;
-}
-bool jwtNode::Service::GetUrSinceRSP(const jwtEvent::GetUrSinceRSP* e)
-{
-    for(auto& z:e->container)
-    {
-        REF_getter<P_user_rec> u=new P_user_rec;
-        u->ur=std::move(z.second);
-        user_2_ur.insert({u->ur.login,u});
-        id_2_ur.insert({z.first,u});
-    }
-    int64_t li=0;
-    if(id_2_ur.size())
-    {
-        li=id_2_ur.rbegin()->first;
-    }
-    if(li<e->lastId)
-    {
-        sendEvent(jwtBossAddr,ServiceEnum::jwtBoss,new jwtEvent::GetUrSinceREQ(li,ListenerBase::serviceId));
-    }
-    return true;
-}
 bool jwtNode::Service::Connected(rpcEvent::Connected *e)
 {
     return true;
@@ -135,20 +102,11 @@ bool jwtNode::Service::handleEvent(const REF_getter<Event::Base>& e)
         if(systemEventEnum::startService==ID)
             return on_startService((const systemEvent::startService*)e.get());
 
-        if(jwtEventEnum::AddTokenRSP==ID)
-            return AddTokenRSP((const jwtEvent::AddTokenRSP*)e.get());
 
-        if(jwtEventEnum::TokenAddedRSP==ID)
-            return on_TokenAddedRSP((const jwtEvent::TokenAddedRSP*)e.get());
-
-        if(jwtEventEnum::AddTokenRSP==ID)
-            return AddTokenRSP((const jwtEvent::AddTokenRSP*)e.get());
         if(jwtEventEnum::RegisterTokenRSP==ID)
             return RegisterTokenRSP(( jwtEvent::RegisterTokenRSP*)e.get());
 
 
-        if(jwtEventEnum::GetUrSinceRSP==ID)
-            return GetUrSinceRSP((const jwtEvent::GetUrSinceRSP*)e.get());
 
 
         if(jwtEventEnum::NotifyDB==ID)
@@ -162,12 +120,6 @@ bool jwtNode::Service::handleEvent(const REF_getter<Event::Base>& e)
         {
             rpcEvent::IncomingOnConnector *E=(rpcEvent::IncomingOnConnector *) e.get();
             auto& IDC=E->e->id;
-            if(jwtEventEnum::TokenAddedRSP==IDC)
-                return on_TokenAddedRSP((const jwtEvent::TokenAddedRSP*)E->e.get());
-            if(jwtEventEnum::AddTokenRSP==IDC)
-                return AddTokenRSP((const jwtEvent::AddTokenRSP*)E->e.get());
-            if(jwtEventEnum::GetUrSinceRSP==IDC)
-                return GetUrSinceRSP((const jwtEvent::GetUrSinceRSP*)E->e.get());
             if(jwtEventEnum::NotifyDB==IDC)
                 return NotifyDB(( jwtEvent::NotifyDB*)E->e.get());
             if(jwtEventEnum::NotifyNewTokenREQ==IDC)
@@ -183,12 +135,6 @@ bool jwtNode::Service::handleEvent(const REF_getter<Event::Base>& e)
         {
             rpcEvent::IncomingOnAcceptor *E=(rpcEvent::IncomingOnAcceptor *) e.get();
             auto& IDA=E->e->id;
-            if(jwtEventEnum::TokenAddedRSP==IDA)
-                return on_TokenAddedRSP((const jwtEvent::TokenAddedRSP*)E->e.get());
-            if(jwtEventEnum::AddTokenRSP==IDA)
-                return AddTokenRSP((const jwtEvent::AddTokenRSP*)E->e.get());
-            if(jwtEventEnum::GetUrSinceRSP==IDA)
-                return GetUrSinceRSP((const jwtEvent::GetUrSinceRSP*)E->e.get());
             if(jwtEventEnum::NotifyDB==IDA)
                 return NotifyDB(( jwtEvent::NotifyDB*)E->e.get());
 
@@ -300,10 +246,6 @@ bool jwtNode::Service::RequestIncoming(const httpEvent::RequestIncoming*e)
 
         std::string query_string=e->req->params["query_string"];
 
-        {
-            user_rec ur;
-            sendEvent(jwtBossAddr,ServiceEnum::jwtBoss,new jwtEvent::AddTokenREQ(ur, ListenerBase::serviceId));
-        }
         return true;
     }
     else
@@ -329,31 +271,3 @@ bool jwtNode::Service::RequestIncoming(const httpEvent::RequestIncoming*e)
 
 
 
-bool jwtNode::Service::on_TokenAddedRSP(const jwtEvent::TokenAddedRSP*e)
-{
-    if(e->count==0)
-    {
-        HTTP::Response resp(getIInstance());
-        auto keepAlive=true;
-        if(keepAlive)
-        {
-            resp.http_header_out["Connection"]="Keep-Alive";
-            resp.http_header_out["Keep-Alive"]="timeout=5, max=100000";
-        }
-        resp.content="<div>received response </div>";
-//        logErr2("resp:%s",resp.build_html_response().c_str());
-//        if(keepAlive)
-//            resp.makeResponsePersistent(S->esi);
-//        else
-//            resp.makeResponse(S->esi);
-
-    }
-    else
-    {
-        user_rec ur;
-        sendEvent(jwtBossAddr,ServiceEnum::jwtBoss,new jwtEvent::AddTokenREQ(ur,ListenerBase::serviceId));
-
-    }
-
-    return true;
-}
