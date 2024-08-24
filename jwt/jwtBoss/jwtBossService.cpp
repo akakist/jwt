@@ -18,7 +18,7 @@ bool jwtBoss::Service::on_startService(const systemEvent::startService*)
     MUTEX_INSPECTOR;
     try {
 
-        sendEvent(ServiceEnum::Timer,new timerEvent::SetTimer(TI_PING,NULL,NULL,cfg_timer_timeout,this));
+        sendEvent(ServiceEnum::Timer,new timerEvent::SetTimer(TI_PING,NULL,NULL,TI_PING_timeout,this));
         sendEvent(ServiceEnum::RPC,new rpcEvent::SubscribeNotifications(this));
 
     }  catch (CommonError& e) {
@@ -34,14 +34,22 @@ bool jwtBoss::Service::TickTimer(const timerEvent::TickTimer* e)
     if(e->tid==TI_PING)
     {
         time_t now=time(NULL);
+        std::set<msockaddr_in> rm;
         for(auto r=subscribers.begin();r!=subscribers.end(); r++)
         {
-            if(now-r->second.last_time_hit > cfg_timer_timeout)
+            if(now-r->second.last_time_hit > cfg_node_time_out)
             {
-                r=subscribers.erase(r);
-                logErr2("erased subscriber due timeout");
+                logErr2("now %ld",now);
+                logErr2("r->second.last_time_hit %ld",r->second.last_time_hit);
+                rm.insert(r->first);
+//                r=subscribers.erase(r);
+//                logErr2("erased subscriber due timeout");
             }
 
+        }
+        for(auto& r:rm)
+        {
+            logErr2("erased subscriber %s due timeout",r.dump().c_str());
         }
     }
     return true;
@@ -80,8 +88,8 @@ bool jwtBoss::Service::handleEvent(const REF_getter<Event::Base>& e)
         if(jwtEventEnum::AddTokenREQ==ID)
             return AddTokenREQ((const jwtEvent::AddTokenREQ*)e.get());
 
-//        if(jwtEventEnum::Ping==ID)
-//            return Ping((const jwtEvent::Ping*)e.get());
+        if(rpcEventEnum::Accepted==ID)
+            return Accepted((const rpcEvent::Accepted*)e.get());
 
 
         if(rpcEventEnum::IncomingOnAcceptor==ID)
@@ -123,6 +131,7 @@ jwtBoss::Service::Service(const SERVICE_id& id, const std::string& nm,IInstance*
     ListenerBuffered1Thread(nm,id),
     Broadcaster(ins)
 {
+    cfg_node_time_out=ins->getConfig()->get_real("cfg_node_time_out",5.,"Kill node by ping timeout");
 }
 
 void register_jwtBoss(const char* pn)

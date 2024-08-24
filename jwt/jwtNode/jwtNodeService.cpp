@@ -13,10 +13,11 @@ bool jwtNode::Service::on_startService(const systemEvent::startService*)
 {
     MUTEX_INSPECTOR;
 
-    sendEvent(ServiceEnum::HTTP,new httpEvent::DoListen(bindAddr,ListenerBase::serviceId));
+    sendEvent(ServiceEnum::HTTP,new httpEvent::DoListen(bindAddr,this));
     sendEvent(ServiceEnum::Timer,new timerEvent::SetTimer(T_PING,NULL,NULL,ping_timeout,this));
 
-    sendEvent(jwtBossAddr,ServiceEnum::jwtBoss,new jwtEvent::Ping(this));
+    printf("KALL %s %d\n",__FILE__,__LINE__);
+    sendEvent(jwtBossAddr,ServiceEnum::jwtBoss,new jwtEvent::Ping(ListenerBase::serviceId));
 
 
     return true;
@@ -24,7 +25,7 @@ bool jwtNode::Service::on_startService(const systemEvent::startService*)
 
 bool jwtNode::Service::TickTimer(const timerEvent::TickTimer *e)
 {
-    sendEvent(jwtBossAddr,ServiceEnum::jwtBoss,new jwtEvent::Ping(this));
+    sendEvent(jwtBossAddr,ServiceEnum::jwtBoss,new jwtEvent::Ping(ListenerBase::serviceId));
     return true;
 }
 bool jwtNode::Service::NotifyDB( jwtEvent::NotifyDB* e)
@@ -216,6 +217,7 @@ std::string index_html=R"ZXC(
 bool jwtNode::Service::on_RequestIncoming(const httpEvent::RequestIncoming*e)
 {
 
+    logErr2("@@ %s",e->dump().toStyledString().c_str());
     HTTP::Response resp(getIInstance());
     if(e->req->url=="/register")
     {

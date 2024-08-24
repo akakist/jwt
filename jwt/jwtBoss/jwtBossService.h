@@ -63,13 +63,14 @@ namespace jwtBoss
         bool TickTimer(const timerEvent::TickTimer* e);
         int64_t lastId();
 
+
         std::map<msockaddr_in, subscriber > subscribers;
 
         std::map<int64_t, user_rec> users;
 
 
         time_t cfg_node_time_out;
-        time_t cfg_timer_timeout;
+        time_t TI_PING_timeout;
 
     };
 
