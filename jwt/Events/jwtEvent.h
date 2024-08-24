@@ -43,23 +43,54 @@ namespace jwtEvent {
         {
             return new NotifyNewTokenREQ(r);
         }
-        NotifyNewTokenREQ(int64_t token_id, const msockaddr_in& _node, const user_rec &_ur,
+        NotifyNewTokenREQ(const msockaddr_in& _dst,const user_rec &_ur,
                    const route_t&r)
             :Base(jwtEventEnum::NotifyNewTokenREQ,r),
-             tokenId(token_id),node(_node),ur(_ur)
+              dst(_dst),
+             ur(_ur)
         {}
         NotifyNewTokenREQ(const route_t&r)
             :Base(jwtEventEnum::NotifyNewTokenREQ,r) {}
-        int64_t tokenId;
-        msockaddr_in node;
+        msockaddr_in dst;
         user_rec ur;
         void unpack(inBuffer& o)
         {
-            o>>tokenId>>node>>ur;
+            o>>dst>>ur;
         }
         void pack(outBuffer&o) const
         {
-            o<<tokenId<<node<<ur;
+            o<<dst<<ur;
+        }
+        void jdump(Json::Value &) const
+        {
+        }
+
+    };
+    class NotifyNewTokenRSP: public Event::Base
+    {
+    public:
+        static Base* construct(const route_t &r)
+        {
+            return new NotifyNewTokenRSP(r);
+        }
+        NotifyNewTokenRSP(const msockaddr_in& _dst,int64_t _t_id,const user_rec& _ur,
+                   const route_t&r)
+            :Base(jwtEventEnum::NotifyNewTokenRSP,r),
+              dst(_dst),
+             t_id(_t_id),ur(_ur)
+        {}
+        NotifyNewTokenRSP(const route_t&r)
+            :Base(jwtEventEnum::NotifyNewTokenRSP,r) {}
+        msockaddr_in dst;
+        int64_t t_id;
+        user_rec ur;
+        void unpack(inBuffer& o)
+        {
+            o>>dst>>t_id>>ur;
+        }
+        void pack(outBuffer&o) const
+        {
+            o<<dst<<t_id<<ur;
         }
         void jdump(Json::Value &) const
         {
@@ -105,22 +136,23 @@ namespace jwtEvent {
         {
             return new RegisterTokenRSP(r);
         }
-        RegisterTokenRSP(const std::string& _err, int64_t _reqNo,
+        RegisterTokenRSP(const std::string& _err, int64_t _reqNo, const user_rec &_ur,
                    const route_t&r)
             :Base(jwtEventEnum::RegisterTokenRSP,r),
-             error(_err),reqNo(_reqNo)
+             error(_err),reqNo(_reqNo),ur(_ur)
         {}
         RegisterTokenRSP(const route_t&r)
             :Base(jwtEventEnum::RegisterTokenRSP,r) {}
         std::string error;
         int64_t reqNo;
+        user_rec ur;
         void unpack(inBuffer& o)
         {
-            o>>error>>reqNo;
+            o>>error>>reqNo>>ur;
         }
         void pack(outBuffer&o) const
         {
-            o<<error<<reqNo;
+            o<<error<<reqNo<<ur;
         }
         void jdump(Json::Value &) const
         {
@@ -223,11 +255,18 @@ namespace jwtEvent {
         }
         Ping(const route_t&r)
             :Base(jwtEventEnum::Ping,r) {}
+
+        Ping(unsigned short _port, const route_t&r)
+            :Base(jwtEventEnum::Ping,r),port(_port) {}
+
+        unsigned short port;
         void unpack(inBuffer& o)
         {
+            o>>port;
         }
         void pack(outBuffer&o) const
         {
+            o<<port;
         }
         void jdump(Json::Value &) const
         {

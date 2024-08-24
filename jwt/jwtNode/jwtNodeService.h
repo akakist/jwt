@@ -10,6 +10,7 @@
 #include "Events/System/Net/httpEvent.h"
 #include "Events/jwtEvent.h"
 #include "Events/System/timerEvent.h"
+#include "Events/System/Net/rpcEvent.h"
 #define SESSION_ID  "session_id"
 
 namespace jwtNode
@@ -35,7 +36,7 @@ namespace jwtNode
         ~Service();
 
 
-        bool on_RequestIncoming(const httpEvent::RequestIncoming*);
+        bool RequestIncoming(const httpEvent::RequestIncoming*);
         bool on_TokenAddedRSP(const jwtEvent::TokenAddedRSP*e);
 
         bool TickTimer(const timerEvent::TickTimer *e);
@@ -43,6 +44,12 @@ namespace jwtNode
         bool AddTokenRSP(const jwtEvent::AddTokenRSP* e);
         bool GetUrSinceRSP(const jwtEvent::GetUrSinceRSP* e);
         bool NotifyDB(jwtEvent::NotifyDB *e);
+
+        bool NotifyNewTokenREQ(jwtEvent::NotifyNewTokenREQ *e);
+        bool RegisterTokenRSP(jwtEvent::RegisterTokenRSP *e);
+
+        bool Connected(rpcEvent::Connected *e);
+        bool Accepted(rpcEvent::Accepted *e);
 
     public:
         void deinit()
@@ -69,7 +76,7 @@ namespace jwtNode
         int64_t reg_seqId=0;
         std::map<int64_t, REF_getter<httpEvent::RequestIncoming> > http_sessions;
 
-
+        IInstance *instance=nullptr;
     };
 
 }

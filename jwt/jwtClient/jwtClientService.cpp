@@ -33,14 +33,16 @@ bool jwtClient::Service::Connected(socketEvent::Connected *e)
     for(int i=0;i<20;i++)
         password+=charss[rand()%charss.size()];
 
-    auto req="GET /register?user="+user+"&password="+password+" HTTP/1.1\r\n"
+    auto req="GET /register?l="+user+"&p="+password+" HTTP/1.1\r\n"
             "User-Agent: Mozilla/4.0 (compatible; MSIE5.01; Windows NT)\r\n"
             "Host: www.tutorialspoint.com\r\n"
             "Accept-Language: en-us\r\n"
             "Accept-Encoding: gzip, deflate\r\n"
             "Connection: Keep-Alive\r\n"
              "\r\n";
-    sendEvent(ServiceEnum::Socket,new socketEvent::Write(e->esi->id_,req));
+//    e->esi->markedToDestroyOnSend_=false;
+    e->esi->write_(req);
+//    sendEvent(ServiceEnum::Socket,new socketEvent::Write(e->esi->id_,req));
 
     auto &kac=keep_alive_conns[e->esi->id_];
     kac.esi=e->esi;
@@ -53,6 +55,10 @@ bool jwtClient::Service::ConnectFailed(socketEvent::ConnectFailed *e)
 {
     logErr2("connect failed, exiting");
     iUtils->setTerminate(1);
+    return true;
+}
+bool jwtClient::Service::NotifyOutBufferEmpty(socketEvent::NotifyOutBufferEmpty *e)
+{
     return true;
 }
 
@@ -74,6 +80,9 @@ bool jwtClient::Service::handleEvent(const REF_getter<Event::Base>& e)
     try {
         MUTEX_INSPECTOR;
         auto& ID=e->id;
+
+        if(socketEventEnum::NotifyOutBufferEmpty==ID)
+            return NotifyOutBufferEmpty(static_cast< socketEvent::NotifyOutBufferEmpty*>(e.get()));
         if(socketEventEnum::Connected==ID)
             return Connected(static_cast< socketEvent::Connected*>(e.get()));
         if(socketEventEnum::ConnectFailed==ID)

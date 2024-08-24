@@ -43,6 +43,7 @@ namespace jwtClient
         bool Connected(socketEvent::Connected *e);
         bool StreamRead(socketEvent::StreamRead *e);
         bool ConnectFailed(socketEvent::ConnectFailed *e);
+        bool NotifyOutBufferEmpty(socketEvent::NotifyOutBufferEmpty *e);
 
 
     public:

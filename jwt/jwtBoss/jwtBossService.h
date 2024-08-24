@@ -57,8 +57,13 @@ namespace jwtBoss
         }
 
         bool Accepted(const rpcEvent::Accepted* e);
+        bool ConnectFailed(const rpcEvent::ConnectFailed* e);
+        bool Connected(const rpcEvent::Connected* e);
+
         bool AddTokenREQ(const jwtEvent::AddTokenREQ* e);
         bool RegisterTokenREQ(const jwtEvent::RegisterTokenREQ* e);
+        bool NotifyNewTokenRSP(const jwtEvent::NotifyNewTokenRSP* e);
+
         bool Ping(const jwtEvent::Ping* e, epoll_socket_info *esi_remote);
         bool TickTimer(const timerEvent::TickTimer* e);
         int64_t lastId();
@@ -67,10 +72,19 @@ namespace jwtBoss
         std::map<msockaddr_in, subscriber > subscribers;
 
         std::map<int64_t, user_rec> users;
+        int64_t idGen=0;
 
 
         time_t cfg_node_time_out;
         time_t TI_PING_timeout;
+
+        struct _notify_task
+        {
+            std::set<msockaddr_in> addrs;
+            int64_t reqNo;
+            route_t backRoute;
+        };
+        std::map<int64_t,_notify_task > notify_task;
 
     };
 

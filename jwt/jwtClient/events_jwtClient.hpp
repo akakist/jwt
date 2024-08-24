@@ -18,7 +18,9 @@ inline std::set<EVENT_id> getEvents_jwtClient()
 	out.insert(rpcEventEnum::IncomingOnAcceptor);
 	out.insert(rpcEventEnum::IncomingOnConnector);
 	out.insert(socketEventEnum::AddToConnectTCP);
+	out.insert(socketEventEnum::ConnectFailed);
 	out.insert(socketEventEnum::Connected);
+	out.insert(socketEventEnum::NotifyOutBufferEmpty);
 	out.insert(socketEventEnum::StreamRead);
 	out.insert(socketEventEnum::Write);
 	out.insert(systemEventEnum::startService);
@@ -33,7 +35,9 @@ inline void regEvents_jwtClient()
 	iUtils->registerEvent(rpcEvent::IncomingOnAcceptor::construct);
 	iUtils->registerEvent(rpcEvent::IncomingOnConnector::construct);
 	iUtils->registerEvent(socketEvent::AddToConnectTCP::construct);
+	iUtils->registerEvent(socketEvent::ConnectFailed::construct);
 	iUtils->registerEvent(socketEvent::Connected::construct);
+	iUtils->registerEvent(socketEvent::NotifyOutBufferEmpty::construct);
 	iUtils->registerEvent(socketEvent::StreamRead::construct);
 	iUtils->registerEvent(socketEvent::Write::construct);
 	iUtils->registerEvent(systemEvent::startService::construct);
