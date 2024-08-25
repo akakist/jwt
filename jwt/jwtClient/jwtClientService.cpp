@@ -5,6 +5,8 @@
 #include <map>
 #include "jwtClientService.h"
 #include "events_jwtClient.hpp"
+#include "splitStr.h"
+#include "tools_mt.h"
 #include "version_mega.h"
 
 
@@ -23,6 +25,7 @@ bool jwtClient::Service::on_startService(const systemEvent::startService*)
 }
 std::string charss="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
+
 bool jwtClient::Service::Connected(socketEvent::Connected *e)
 {
     std::string user;
@@ -40,14 +43,13 @@ bool jwtClient::Service::Connected(socketEvent::Connected *e)
             "Accept-Encoding: gzip, deflate\r\n"
             "Connection: Keep-Alive\r\n"
              "\r\n";
-//    e->esi->markedToDestroyOnSend_=false;
     e->esi->write_(req);
-//    sendEvent(ServiceEnum::Socket,new socketEvent::Write(e->esi->id_,req));
 
     auto &kac=keep_alive_conns[e->esi->id_];
     kac.esi=e->esi;
     kac.login=user;
     kac.passwd=password;
+    kac.actions.push_back("registration");
 
     return true;
 }
@@ -61,11 +63,104 @@ bool jwtClient::Service::NotifyOutBufferEmpty(socketEvent::NotifyOutBufferEmpty 
 {
     return true;
 }
+bool parseHttp(std::string& inb, std::map<std::string,std::string> & params, std::string& body)
+{
+    auto pz=inb.find("\r\n\r\n");
+    if(pz!=std::string::npos)
+    {
+        auto head=inb.substr(0,pz);
+//        logErr2("head %s",head.c_str());
+        auto dq=splitStr("\r\n",head);
+        if(dq.size())
+        {
+            auto l1=splitStr(" ",dq[0]);
+//            logErr2("l1 %s",dq[0].c_str());
+            if(l1.size()==3)
+            {
+                auto code=l1[1];
+                if(code!="200")
+                    throw CommonError("invalid response");
+            }
+            dq.pop_front();
+            for(auto &z: dq)
+            {
+                auto l1=splitStr(": ",z);
+                if(l1.size()==2)
+                {
+                    params[l1[0]]=l1[1];
+                }
 
+            }
+        }
+        auto ct=atoi(params["Content-Length"].c_str());
+        if(inb.size()==pz+4+ct)
+        {
+            body=inb.substr(pz+4,inb.size()-(pz+4));
+            inb.clear();
+        }
+        else if(inb.size()>pz+4+ct)
+        {
+            body=inb.substr(pz+4,ct);
+            inb=inb.substr(pz+4+ct);
+        }
+        else if(inb.size()<pz+4+ct)
+            return false;
+        return true;
+        if(body.size())
+        {
+            logErr2("body %s",body.c_str());
+        }
+    }
+    return false;
+}
 bool jwtClient::Service::StreamRead(socketEvent::StreamRead *e)
 {
-    auto buf=e->esi->inBuffer_._mx_data;
-    printf("recv %s\n",buf.c_str());
+    std::string head;
+    auto& inb=in_bufs[e->esi->id_];
+    {
+        W_LOCK(e->esi->inBuffer_.lk);
+        inb.append(std::move(e->esi->inBuffer_._mx_data));
+        e->esi->inBuffer_._mx_data.clear();
+    }
+    std::map<std::string,std::string> params;
+    std::string body;
+    if(parseHttp(inb,params,body))
+    {
+        auto & kac=keep_alive_conns[e->esi->id_];
+        if(kac.actions.empty())
+            throw CommonError("if(kac.actions.empty())");
+        auto action=kac.actions.front();
+        kac.actions.pop_front();
+        if(action=="registration")
+        {
+            Json::Value j=jparse(body);
+            user_rec ur;
+            ur.load(j);
+            tokens.push_back(std::move(ur));
+        }
+        else if(action=="/")
+        {
+
+        }
+        else
+            throw CommonError("unhandled action %s",action.c_str());
+
+    }
+    auto token=tokens[rand()%tokens.size()].jwt;
+    auto req="GET / HTTP/1.1\r\n"
+            "User-Agent: Mozilla/4.0 (compatible; MSIE5.01; Windows NT)\r\n"
+            "Host: www.tutorialspoint.com\r\n"
+            "Accept-Language: en-us\r\n"
+            "Accept-Encoding: gzip, deflate\r\n"
+            "Auth: "+token+"\r\n"
+            "Connection: Keep-Alive\r\n"
+            "Keep-Alive: timeout=5, max=1000\r\n"
+             "\r\n";
+    e->esi->write_(req);
+
+    auto &kac=keep_alive_conns[e->esi->id_];
+    kac.actions.push_back("/");
+
     return true;
 }
 
@@ -96,8 +191,6 @@ bool jwtClient::Service::handleEvent(const REF_getter<Event::Base>& e)
 
         if(systemEventEnum::startService==ID)
             return on_startService((const systemEvent::startService*)e.get());
-
-
         if(rpcEventEnum::IncomingOnConnector==ID)
         {
             rpcEvent::IncomingOnConnector *E=(rpcEvent::IncomingOnConnector *) e.get();

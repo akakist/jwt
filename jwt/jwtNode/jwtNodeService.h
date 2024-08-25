@@ -68,6 +68,7 @@ namespace jwtNode
 
         std::map<std::string, REF_getter<P_user_rec> > user_2_ur;
         std::map<int64_t, REF_getter<P_user_rec> > id_2_ur;
+        std::map<std::string, REF_getter<P_user_rec> > token_2_ur;
 
 
         int64_t reg_seqId=0;

@@ -75,13 +75,18 @@ namespace jwtClient
             REF_getter<epoll_socket_info> esi=nullptr;
             std::string login;
             std::string passwd;
+            std::deque<std::string> actions;
 
 
         };
         std::map<SOCKET_id, _connInfo > keep_alive_conns;
 
 
+        std::map<SOCKET_id,std::string> in_bufs;
 
+        std::vector<user_rec> tokens;
+
+//        std::map<SOCKET_id,std::deque<std::string> > actions_on_connection;
 
     };
 

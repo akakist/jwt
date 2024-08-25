@@ -20,6 +20,15 @@ struct user_rec
         j["jwt"]=jwt;
         return j;
     }
+    void load(const Json::Value& j)
+    {
+        id=j["id"].asInt64();
+        login=j["login"].asString();
+        expired=j["expired"].asInt64();
+        reg_datetime=j["reg_datetime"].asInt64();
+        jwt=j["jwt"].asString();
+
+    }
 };
 inline outBuffer& operator<< (outBuffer& b,const user_rec& s)
 {

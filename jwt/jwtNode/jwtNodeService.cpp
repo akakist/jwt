@@ -39,6 +39,7 @@ bool jwtNode::Service::NotifyDB( jwtEvent::NotifyDB* e)
         int64_t id=z.first;
         user_2_ur.insert({p->ur.login,p});
         id_2_ur.insert({z.first,p});
+        token_2_ur.insert({p->ur.jwt,p});
     }
     return true;
 }
@@ -57,7 +58,8 @@ bool jwtNode::Service::NotifyNewTokenREQ(jwtEvent::NotifyNewTokenREQ *e)
     p->ur=e->ur;
     user_2_ur.insert({p->ur.login,p});
     id_2_ur.insert({p->ur.id,p});
-    logErr2("node recv jwt %s",p->ur.jdump().toStyledString().c_str());
+    token_2_ur.insert({p->ur.jwt,p});
+//    logErr2("node recv jwt %s",p->ur.jdump().toStyledString().c_str());
     passEvent(new jwtEvent::NotifyNewTokenRSP(e->dst,e->ur.id,e->ur,poppedFrontRoute(e->route)));
     return true;
 }
@@ -77,11 +79,12 @@ bool jwtNode::Service::RegisterTokenRSP(jwtEvent::RegisterTokenRSP *e)
             j["jwt"]=e->ur.jwt;
             j["reg_datetime"]=e->ur.reg_datetime;
             resp.content=j.toStyledString();
+            resp.http_header_out["Connection"]="Keep-Alive";
+            resp.http_header_out["Keep-Alive"]="timeout=5, max=100000";
 
             std::string out = resp.build_html_response();
             it->second->esi->write_(out);
 
-//            resp.makeResponsePersistent(it->second->esi);
         }
         else throw CommonError("!if(it!=http_sessions.end())");
     }
@@ -205,25 +208,13 @@ void register_jwtNode(const char* pn)
 
 
 
-std::string index_html=R"ZXC(
-<!DOCTYPE html>
-<html>
-<head>
-<title>jwt</title>
-</head>
 
-<body>
-
-    <div>
-     starting handling request
-    </div>
-</body>
-</html>
-)ZXC";
-
+int cnt=0;
 bool jwtNode::Service::RequestIncoming(const httpEvent::RequestIncoming*e)
 {
-
+    cnt++;
+    if(cnt%1000==0)
+        logErr2("RequestIncoming %d",cnt);
 //    logErr2("@@ %s",e->dump().toStyledString().c_str());
     HTTP::Response resp(getIInstance());
 
@@ -236,12 +227,32 @@ bool jwtNode::Service::RequestIncoming(const httpEvent::RequestIncoming*e)
         sendEvent(jwtBossAddr,ServiceEnum::jwtBoss,new jwtEvent::RegisterTokenREQ(l,p,session,ListenerBase::serviceId));
         return true;
 
-    }
-//    for(auto &z: e->req->headers)
-//    {
-//        printf("%s: %s\n",z.first.c_str(),z.second.c_str());
-//    }
+    } else if(e->req->url=="/")
+    {
+        HTTP::Response resp(getIInstance());
+        auto token=e->req->headers["Auth"];
+//        logErr2("token %s",token.c_str());
+        auto it=token_2_ur.find(token);
+        if(it==token_2_ur.end())
+        {
 
+            resp.http_code=401;
+            resp.http_header_out["Connection"]="Keep-Alive";
+            resp.http_header_out["Keep-Alive"]="timeout=5, max=100000";
+            std::string out = resp.build_html_response();
+            e->esi->write_(out);
+
+        }
+        else {
+            resp.http_header_out["Connection"]="Keep-Alive";
+            resp.http_header_out["Keep-Alive"]="timeout=5, max=100000";
+            std::string out = resp.build_html_response();
+            e->esi->write_(out);
+
+        }
+    }
+
+#ifdef KALL
     if(1){
 
         std::string query_string=e->req->params["query_string"];
@@ -265,7 +276,7 @@ bool jwtNode::Service::RequestIncoming(const httpEvent::RequestIncoming*e)
             resp.makeResponse(e->esi);
 
     }
-
+#endif
     return true;
 }
 
